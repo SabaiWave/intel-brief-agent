@@ -77,13 +77,15 @@ Rules:
 
 export function briefUserPrompt(
   analysisOutput: AnalysisOutput,
-  agentOutputsSummary: string
+  agentOutputsSummary: string,
+  degradedContext: string | null
 ): string {
-  return `Analysis output:
-${JSON.stringify(analysisOutput, null, 2)}
-
-Full agent data:
-${agentOutputsSummary}
-
-Assemble the final competitive intelligence brief.`;
+  return [
+    degradedContext ?? null,
+    `Analysis output:\n${JSON.stringify(analysisOutput, null, 2)}`,
+    `Full agent data:\n${agentOutputsSummary}`,
+    'Assemble the final competitive intelligence brief.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }

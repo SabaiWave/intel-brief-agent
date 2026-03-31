@@ -65,6 +65,7 @@ export async function runCompetitorAgent(
       messages: [{ role: 'user', content: competitorUserPrompt(allCompanies, searchText) }],
     });
 
+    console.log(`[competitor] tokens:`, message.usage);
     const raw = message.content[0].type === 'text' ? message.content[0].text : '';
     const parsed = parseJSON<CompetitorOutput>(raw);
 

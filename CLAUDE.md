@@ -1,10 +1,8 @@
-# CLAUDE.md — competitive-intel-agent
+# CLAUDE.md — scoutwork
 
 ## Project Identity
-- **Product:** Competitive Intelligence Briefing Agent
-- **Brand:** Sabai Wave (SBW)
-- **Owner:** Alex (sole developer, US citizen, Chiang Mai, Thailand)
-- **LLC:** Wyoming LLC — Sabai Wave
+- **Product:** ScoutWork
+- **Tagline:** Competitive intelligence, on demand.
 
 ## What This Does
 User submits their company + up to 3 competitors + optional research focus.

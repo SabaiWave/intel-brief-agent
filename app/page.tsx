@@ -82,11 +82,12 @@ function AgentStatusPanel({
                 </span>
               </span>
               <span className="text-xs text-zinc-400">
-                {state.confidence && state.status === 'complete'
-                  ? state.confidence
-                  : state.durationMs
-                  ? `${(state.durationMs / 1000).toFixed(1)}s`
-                  : ''}
+                {state.status === 'complete' && (
+                  <>
+                    {state.confidence && <span className="mr-1.5">{state.confidence}</span>}
+                    {state.durationMs && <span>{(state.durationMs / 1000).toFixed(1)}s</span>}
+                  </>
+                )}
               </span>
             </li>
           );
@@ -533,7 +534,6 @@ export default function Home() {
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <div>
             <span className="text-sm font-semibold text-zinc-900">{clientConfig.brand.name}</span>
-            <span className="ml-2 text-sm text-zinc-400">{cfg.name}</span>
           </div>
           {(hasActivity || brief) && (
             <button

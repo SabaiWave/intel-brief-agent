@@ -55,6 +55,7 @@ export async function runResearchAgent(
       messages: [{ role: 'user', content: researchUserPrompt(company, searchText) }],
     });
 
+    console.log(`[research:${company}] tokens:`, message.usage);
     const raw = message.content[0].type === 'text' ? message.content[0].text : '';
     const parsed = parseJSON<Omit<ResearchOutput, 'sources'>>(raw);
 

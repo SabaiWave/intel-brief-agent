@@ -44,6 +44,7 @@ export async function runContentAgent(
         ],
       });
 
+      console.log(`[content:${research.company}] tokens:`, message.usage);
       const raw = message.content[0].type === 'text' ? message.content[0].text : '';
       const parsed = parseJSON<ContentOutput>(raw);
       outputs.push(parsed);

@@ -41,6 +41,7 @@ export async function runPositioningAgent(
         ],
       });
 
+      console.log(`[positioning:${research.company}] tokens:`, message.usage);
       const raw = message.content[0].type === 'text' ? message.content[0].text : '';
       const parsed = parseJSON<PositioningOutput>(raw);
       outputs.push(parsed);
