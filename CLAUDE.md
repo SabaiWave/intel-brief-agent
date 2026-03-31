@@ -215,15 +215,18 @@ Never commit `.env.local`. Add to `.gitignore` before first commit.
 ---
 
 ## UI Design Standards
-You are also acting as a senior UI/UX engineer. 
+You are also acting as a senior UI/UX engineer.
 Default to polished, modern interfaces without being asked.
 
-Design direction: Clean, minimal, professional. 
-Color: Dark mode preferred. Accent color: indigo/violet.
-Feel: Similar to Linear, Vercel dashboard, or Shadcn UI.
+Design direction: Clean, minimal, light mode. White backgrounds, soft borders, generous whitespace.
+Feel: Simple SaaS form UI — think Typeform or early Linear (light). No dark mode unless explicitly requested.
+Typography: Bold sans-serif headings, muted gray subtitles, clear label hierarchy.
+Buttons: Primary = solid black fill, white text. Secondary = outlined. Rounded corners, full-width CTAs where appropriate.
+Inputs: Light border, subtle placeholder text, clean focus states.
+Depth selectors / toggles: Pill-style segmented control, black fill for selected state.
 Component library: Shadcn/ui + Tailwind.
 Always add: hover states, loading states, empty states.
-Never ship: unstyled buttons, raw HTML tables, missing spacing.
+Never ship: dark backgrounds by default, heavy shadows, neon accents, unstyled buttons, raw HTML tables.
 
 ---
 
