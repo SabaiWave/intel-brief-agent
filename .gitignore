@@ -36,7 +36,6 @@ yarn-error.log*
 # project
 /outputs/
 /planning/
-CLAUDE.md
 AGENTS.md
 
 # vercel
