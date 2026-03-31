@@ -154,8 +154,6 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
     const contentW = pageW - marginX * 2;
     let y = marginY;
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
     function checkPageBreak(needed: number) {
       if (y + needed > pageH - marginY) {
         doc.addPage();
@@ -180,7 +178,6 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
     }
 
     function writeSection(title: string, body: string) {
-      // Section heading with rule
       checkPageBreak(32);
       y += 10;
       doc.setFontSize(13);
@@ -193,7 +190,6 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
       doc.line(marginX, y, pageW - marginX, y);
       y += 12;
 
-      // Parse and write body blocks
       const blocks = body.split('\n\n');
       for (const block of blocks) {
         if (/^#{2,3} /.test(block)) {
@@ -243,8 +239,6 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
       }
     }
 
-    // ── Cover block ────────────────────────────────────────────────────────────
-
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(160, 160, 160);
@@ -273,8 +267,6 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
     doc.line(marginX, y, pageW - marginX, y);
     y += 24;
 
-    // ── Executive Summary ──────────────────────────────────────────────────────
-
     checkPageBreak(32);
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
@@ -301,15 +293,11 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
     }
     y += 12;
 
-    // ── Body sections ──────────────────────────────────────────────────────────
-
     writeSection(cfg.companySnapshot, brief.companySnapshot);
     writeSection(cfg.competitorProfiles, brief.competitorProfiles);
     writeSection(cfg.positioningGaps, brief.positioningGapAnalysis);
     writeSection(cfg.recentMoves, brief.recentMovesAndSignals);
     writeSection(cfg.contentOpportunities, brief.contentAndSEOOpportunities);
-
-    // ── Recommended Actions ────────────────────────────────────────────────────
 
     checkPageBreak(32);
     y += 10;
@@ -340,7 +328,6 @@ function BriefRenderer({ brief }: { brief: BriefingOutput }) {
       y += 4;
     });
 
-    // ── Footer ─────────────────────────────────────────────────────────────────
     addFooter();
 
     const slug = brief.request.yourCompany.toLowerCase().replace(/\s+/g, '-');
