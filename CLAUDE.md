@@ -236,7 +236,8 @@ If you accidentally commit a secret:
 
 ## Current Status
 
-- [ ] Phase 1: Backend (agents, orchestrator, synthesis, Tavily)
-- [ ] Phase 2: SSE API route + Next.js UI
+- [x] Phase 1: Backend (agents, orchestrator, synthesis, Tavily)
+- [x] Phase 2: SSE API route + Next.js UI
 - [ ] Phase 3: Vercel deployment
-- [ ] Phase 4: New vertical (via planning/02_new_vertical.md)
+- [ ] Phase 4: Token management (budget cap, usage tracking, degraded output on limit)
+- [ ] Phase 5: New vertical (via planning/02_new_vertical.md)

@@ -35,7 +35,7 @@ ANTHROPIC_API_KEY=
 TAVILY_API_KEY=
 ```
 
-Both must be in `.env.local` (never `.env` — already learned this lesson).
+Both must be in `.env.local` (never `.env`)
 
 ### Before Writing Any Code
 
@@ -53,6 +53,16 @@ Both must be in `.env.local` (never `.env` — already learned this lesson).
 - All prompts are functions in `src/prompts/` — not inline strings
 - Tavily: Research + Competitor agents only. Others reason over outputs.
 - Config strings from `config/client.ts`, not hardcoded
+- LLM responses always go through `src/lib/parseJSON.ts` — never raw `JSON.parse`
+- Dry run mode: `DRY_RUN=true` in `.env.local` bypasses all API calls with fixture data (dev/test only)
+
+### Phases
+
+- [x] Phase 1: Backend (agents, orchestrator, synthesis, Tavily)
+- [x] Phase 2: SSE API route + Next.js UI
+- [ ] Phase 3: Vercel deployment
+- [ ] Phase 4: Token management (budget cap, usage tracking, degraded output on limit)
+- [ ] Phase 5: New vertical (via planning/02_new_vertical.md)
 
 ### Current Session Goal
 
