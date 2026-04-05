@@ -6,6 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { analysisSystemPrompt, analysisUserPrompt, briefSystemPrompt, briefUserPrompt } from '../prompts/synthesis';
+import { addLLMUsage } from '../lib/cost';
 import { parseJSON } from '../lib/parseJSON';
 import {
   AgentContext,
@@ -23,6 +24,24 @@ const anthropic = new Anthropic();
 interface SynthesisResult {
   analysisResult: AnalysisOutput | null;
   briefResult: AgentResult<BriefingOutput>;
+}
+
+const DEGRADED_MESSAGES: Record<string, string> = {
+  positioning: 'Positioning agent failed — positioning gap analysis based on research data only, no dedicated messaging analysis.',
+  competitor: 'Competitor agent failed — recent moves section based on research summaries only, no dedicated competitive search.',
+  content: 'Content agent failed — content and SEO section based on research data only, no dedicated content analysis.',
+  analysis: 'Analysis agent failed — brief assembled directly from agent outputs without cross-cutting analysis.',
+};
+
+function buildDegradedContext(failedAgents: string[]): string {
+  const messages = failedAgents.map((name) => {
+    if (name.startsWith('research:')) {
+      const company = name.split(':')[1];
+      return `Research agent failed for ${company} — sections covering ${company} are based on other agents' data only.`;
+    }
+    return DEGRADED_MESSAGES[name] ?? `${name} agent failed — related section may be incomplete.`;
+  });
+  return `DEGRADED OUTPUT — the following agents failed:\n${messages.map((m) => `- ${m}`).join('\n')}\n\nAcknowledge these specific gaps in the relevant sections of the brief.`;
 }
 
 function buildAgentSummary(allResults: AgentResult<unknown>[]): string {
@@ -54,6 +73,7 @@ function buildAgentSummary(allResults: AgentResult<unknown>[]): string {
           `Pricing signals: ${p.pricingSignals.join(', ')}\n` +
           `Tone: ${p.messagingTone}\n` +
           `Differentiators: ${p.differentiators.join(', ')}\n` +
+          `Positioning vulnerability: ${p.positioningVulnerability}\n` +
           `Confidence: ${p.confidence}`
         );
       }
@@ -73,7 +93,8 @@ function buildAgentSummary(allResults: AgentResult<unknown>[]): string {
         Object.entries(c.weaknesses)
           .map(([co, weak]) => `${co} weaknesses: ${weak.join(', ')}`)
           .join('\n') +
-        `\nConfidence: ${c.confidence}`
+        `\nCompetitive verdict: ${c.competitiveVerdict}\n` +
+        `Confidence: ${c.confidence}`
       );
     } else if (result.agent === 'content') {
       const items = data as ContentOutput[];
@@ -106,11 +127,12 @@ export async function synthesize(
   try {
     const analysisMessage = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: analysisSystemPrompt(context),
       messages: [{ role: 'user', content: analysisUserPrompt(agentSummary) }],
     });
 
+    addLLMUsage('analysis', analysisMessage.usage);
     const raw = analysisMessage.content[0].type === 'text' ? analysisMessage.content[0].text : '';
     analysisOutput = parseJSON<AnalysisOutput>(raw);
   } catch {
@@ -121,10 +143,18 @@ export async function synthesize(
   // ── Step B: Brief Assembly ─────────────────────────────────────────────────
   const start = Date.now();
 
+  const failedAgents = Object.entries(agentStatuses)
+    .filter(([, s]) => s === 'rejected')
+    .map(([name]) => name);
+
+  const degradedContext = failedAgents.length > 0
+    ? buildDegradedContext(failedAgents)
+    : null;
+
   try {
     const briefMessage = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: briefSystemPrompt(context),
       messages: [
         {
@@ -138,18 +168,16 @@ export async function synthesize(
               strengthsByCompany: {},
               weaknessesByCompany: {},
             },
-            agentSummary
+            agentSummary,
+            degradedContext
           ),
         },
       ],
     });
 
+    addLLMUsage('synthesis', briefMessage.usage);
     const raw = briefMessage.content[0].type === 'text' ? briefMessage.content[0].text : '';
     const parsed = parseJSON<Omit<BriefingOutput, 'request' | 'metadata'>>(raw);
-
-    const failedAgents = Object.entries(agentStatuses)
-      .filter(([, s]) => s === 'rejected')
-      .map(([name]) => name);
 
     const output: BriefingOutput = {
       ...parsed,

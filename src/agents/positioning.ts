@@ -6,6 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { positioningSystemPrompt, positioningUserPrompt } from '../prompts/positioning';
 import { parseJSON } from '../lib/parseJSON';
+import { addLLMUsage } from '../lib/cost';
 import { AgentContext, AgentResult, PositioningOutput, ResearchOutput } from '../types';
 
 const anthropic = new Anthropic();
@@ -34,13 +35,14 @@ export async function runPositioningAgent(
 
       const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: positioningSystemPrompt(context),
         messages: [
           { role: 'user', content: positioningUserPrompt(research.company, summary) },
         ],
       });
 
+      addLLMUsage(`positioning:${research.company}`, message.usage);
       const raw = message.content[0].type === 'text' ? message.content[0].text : '';
       const parsed = parseJSON<PositioningOutput>(raw);
       outputs.push(parsed);

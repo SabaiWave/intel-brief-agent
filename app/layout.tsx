@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Intel Brief — Sabai Wave",
+  title: "ScoutWork",
   description: "AI-powered competitive intelligence in minutes.",
 };
 

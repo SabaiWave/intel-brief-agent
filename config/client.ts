@@ -1,17 +1,16 @@
 // config/client.ts
-// White-label configuration for Sabai Wave.
+// White-label configuration for ScoutWork.
 // All user-facing strings sourced from here — never hardcoded elsewhere.
 
 export const clientConfig = {
   brand: {
-    name: 'Sabai Wave',
-    shortName: 'SBW',
-    tagline: 'Competitive intelligence, accelerated.',
-    url: 'https://sabaiwave.com',
+    name: 'ScoutWork',
+    shortName: 'SW',
+    tagline: 'Competitive intelligence, on demand.',
   },
 
   product: {
-    name: 'Intel Brief',
+    name: 'ScoutWork',
     description: 'AI-powered competitive intelligence in minutes.',
     inputLabel: 'Your company',
     competitorLabel: 'Competitors',
