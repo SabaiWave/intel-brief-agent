@@ -40,6 +40,7 @@ export interface PositioningOutput {
   pricingSignals: string[];
   messagingTone: string;
   differentiators: string[];
+  positioningVulnerability: string;  // single most exploitable gap — feeds Positioning Gap Analysis
   confidence: 'high' | 'medium' | 'low';
   gaps: string[];
 }
@@ -49,6 +50,7 @@ export interface CompetitorOutput {
   recentMoves: Record<string, string[]>;    // company → moves[]
   featureSets: Record<string, string[]>;    // company → features[]
   weaknesses: Record<string, string[]>;     // company → weaknesses[]
+  competitiveVerdict: string;     // who's most dangerous, what's most urgent, is position strengthening or eroding
   confidence: 'high' | 'medium' | 'low';
   gaps: string[];
 }

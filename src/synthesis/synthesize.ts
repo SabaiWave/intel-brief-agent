@@ -6,6 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { analysisSystemPrompt, analysisUserPrompt, briefSystemPrompt, briefUserPrompt } from '../prompts/synthesis';
+import { addLLMUsage } from '../lib/cost';
 import { parseJSON } from '../lib/parseJSON';
 import {
   AgentContext,
@@ -72,6 +73,7 @@ function buildAgentSummary(allResults: AgentResult<unknown>[]): string {
           `Pricing signals: ${p.pricingSignals.join(', ')}\n` +
           `Tone: ${p.messagingTone}\n` +
           `Differentiators: ${p.differentiators.join(', ')}\n` +
+          `Positioning vulnerability: ${p.positioningVulnerability}\n` +
           `Confidence: ${p.confidence}`
         );
       }
@@ -91,7 +93,8 @@ function buildAgentSummary(allResults: AgentResult<unknown>[]): string {
         Object.entries(c.weaknesses)
           .map(([co, weak]) => `${co} weaknesses: ${weak.join(', ')}`)
           .join('\n') +
-        `\nConfidence: ${c.confidence}`
+        `\nCompetitive verdict: ${c.competitiveVerdict}\n` +
+        `Confidence: ${c.confidence}`
       );
     } else if (result.agent === 'content') {
       const items = data as ContentOutput[];
@@ -124,12 +127,12 @@ export async function synthesize(
   try {
     const analysisMessage = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: analysisSystemPrompt(context),
       messages: [{ role: 'user', content: analysisUserPrompt(agentSummary) }],
     });
 
-    console.log(`[analysis] tokens:`, analysisMessage.usage);
+    addLLMUsage('analysis', analysisMessage.usage);
     const raw = analysisMessage.content[0].type === 'text' ? analysisMessage.content[0].text : '';
     analysisOutput = parseJSON<AnalysisOutput>(raw);
   } catch {
@@ -151,7 +154,7 @@ export async function synthesize(
   try {
     const briefMessage = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: briefSystemPrompt(context),
       messages: [
         {
@@ -172,7 +175,7 @@ export async function synthesize(
       ],
     });
 
-    console.log(`[synthesis] tokens:`, briefMessage.usage);
+    addLLMUsage('synthesis', briefMessage.usage);
     const raw = briefMessage.content[0].type === 'text' ? briefMessage.content[0].text : '';
     const parsed = parseJSON<Omit<BriefingOutput, 'request' | 'metadata'>>(raw);
 

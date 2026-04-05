@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ScoutWork
+
+AI-powered competitive intelligence briefs in minutes.
+
+Submit your company and up to 3 competitors. A team of specialist AI agents runs in parallel, synthesizes findings, and delivers a structured competitive intelligence brief — streamed live to the UI.
+
+---
+
+## What's Built
+
+### Multi-agent pipeline
+- **Orchestrator** — generates tailored instructions per agent from the user's request
+- **Research agents** — one per company, parallel Tavily web search
+- **Positioning agent** — extracts messaging, pricing signals, differentiators
+- **Competitor agent** — maps feature sets, recent moves, weaknesses
+- **Content agent** — identifies SEO signals, content gaps, channel presence
+- **Analysis** — cross-agent synthesis: patterns, gaps, opportunities, threats
+- **Synthesis** — assembles the final client-ready brief in Markdown
+
+### Streaming UI
+- Live agent status panel with per-agent timing
+- Server-Sent Events (SSE) stream from API route to browser
+- Partial failure handling — failed agents noted in brief, pipeline continues
+- PDF download via jsPDF
+
+### Infrastructure
+- Next.js 14+ App Router
+- Anthropic Claude (`claude-sonnet-4-5`) for all LLM calls
+- Tavily API for web search (research + competitor agents)
+- Per-brief cost logging to terminal (LLM + Tavily)
+
+---
+
+## Stack
+
+| Layer | Tech |
+|---|---|
+| Framework | Next.js (App Router) |
+| AI | Anthropic SDK — claude-sonnet-4-5 |
+| Search | Tavily API |
+| Styling | Tailwind CSS |
+| Deployment | Vercel |
+
+---
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` in the project root:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+ANTHROPIC_API_KEY=
+TAVILY_API_KEY=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+**Dry run mode** (no API calls, zero cost):
+```bash
+DRY_RUN=true
+```
+Add to `.env.local` to test the full UI and streaming pipeline with fixture data.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+├── app/
+│   ├── api/brief/route.ts      # SSE streaming endpoint
+│   ├── layout.tsx
+│   └── page.tsx                # Main UI
+├── src/
+│   ├── agents/                 # research, positioning, competitor, content
+│   ├── orchestrator.ts         # pipeline entry point
+│   ├── synthesis/synthesize.ts # analysis + brief assembly
+│   ├── tools/tavily.ts         # Tavily wrapper
+│   ├── prompts/                # all LLM prompt functions
+│   ├── types/index.ts          # shared interfaces — source of truth
+│   └── lib/
+│       ├── cost.ts             # token + cost tracking
+│       └── parseJSON.ts        # strips markdown fences from LLM responses
+├── config/client.ts            # brand config — all user-facing strings
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Cost Baseline
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tested at max load (1 company + 3 competitors), April 2026.
+
+Cost summary prints to terminal after each real brief run (LLM + Tavily breakdown per agent).
+
+---
+
+## Roadmap
+
+- [x] Phase 1 — Multi-agent backend (agents, orchestrator, synthesis, Tavily)
+- [x] Phase 2 — SSE streaming API + Next.js UI
+- [x] Phase 3 — Brief quality, prompt iteration, cost baseline
+- [ ] Phase 4 — Brief persistence (Supabase)
+- [ ] Phase 5 — Auth (Clerk)
+- [ ] Phase 6 — Stripe paywall
+- [ ] Phase 7 — UI polish + landing page
+- [ ] Phase 8 — Token + cost management

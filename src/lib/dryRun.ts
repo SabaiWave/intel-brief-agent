@@ -52,6 +52,7 @@ function makePositioning(company: string): PositioningOutput {
     pricingSignals: ['Freemium tier', 'Per-seat pricing', 'Enterprise contract available'],
     messagingTone: 'Friendly, productivity-focused, slightly technical',
     differentiators: ['Speed of setup', 'Breadth of integrations'],
+    positioningVulnerability: 'No visible enterprise tier — leaves upmarket flank undefended',
     confidence: 'high',
     gaps: [],
   };
@@ -72,7 +73,15 @@ function makeCompetitor(companies: string[]): AgentResult<CompetitorOutput> {
     status: 'fulfilled',
     agent: 'competitor',
     durationMs: 1200,
-    data: { companies, recentMoves, featureSets, weaknesses, confidence: 'high', gaps: [] },
+    data: {
+      companies,
+      recentMoves,
+      featureSets,
+      weaknesses,
+      competitiveVerdict: `${companies[1] ?? companies[0]} is the most dangerous competitor — recent AI launch directly overlaps core positioning. ${companies[0]}'s position is holding but at risk if AI narrative gap isn't closed in the next two quarters.`,
+      confidence: 'high',
+      gaps: [],
+    },
   };
 }
 

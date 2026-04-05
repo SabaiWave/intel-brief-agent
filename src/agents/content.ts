@@ -6,6 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { contentSystemPrompt, contentUserPrompt } from '../prompts/content';
 import { parseJSON } from '../lib/parseJSON';
+import { addLLMUsage } from '../lib/cost';
 import { AgentContext, AgentResult, ContentOutput, ResearchOutput } from '../types';
 
 const anthropic = new Anthropic();
@@ -37,14 +38,14 @@ export async function runContentAgent(
 
       const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: contentSystemPrompt(context),
         messages: [
           { role: 'user', content: contentUserPrompt(research.company, summary) },
         ],
       });
 
-      console.log(`[content:${research.company}] tokens:`, message.usage);
+      addLLMUsage(`content:${research.company}`, message.usage);
       const raw = message.content[0].type === 'text' ? message.content[0].text : '';
       const parsed = parseJSON<ContentOutput>(raw);
       outputs.push(parsed);

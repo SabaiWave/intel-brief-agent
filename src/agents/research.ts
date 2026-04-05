@@ -6,6 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { tavilySearch } from '../tools/tavily';
 import { researchSystemPrompt, researchUserPrompt } from '../prompts/research';
 import { parseJSON } from '../lib/parseJSON';
+import { addLLMUsage } from '../lib/cost';
 import { AgentContext, AgentResult, ResearchOutput } from '../types';
 
 const anthropic = new Anthropic();
@@ -50,12 +51,12 @@ export async function runResearchAgent(
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: researchSystemPrompt(context),
       messages: [{ role: 'user', content: researchUserPrompt(company, searchText) }],
     });
 
-    console.log(`[research:${company}] tokens:`, message.usage);
+    addLLMUsage(`research:${company}`, message.usage);
     const raw = message.content[0].type === 'text' ? message.content[0].text : '';
     const parsed = parseJSON<Omit<ResearchOutput, 'sources'>>(raw);
 

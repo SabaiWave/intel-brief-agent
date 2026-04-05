@@ -4,6 +4,7 @@
 
 import { tavily } from '@tavily/core';
 import { clientConfig } from '../../config/client';
+import { addTavilySearch } from '../lib/cost';
 
 export interface TavilyResult {
   url: string;
@@ -30,6 +31,7 @@ export async function tavilySearch(
   const client = getClient();
   const maxResults = clientConfig.depth[depth].tavilyResults;
 
+  addTavilySearch();
   const response = await client.search(query, {
     maxResults,
     searchDepth: depth === 'deep' ? 'advanced' : 'basic',
