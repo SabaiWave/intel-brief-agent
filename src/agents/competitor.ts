@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { tavilySearch } from '../tools/tavily';
 import { competitorSystemPrompt, competitorUserPrompt } from '../prompts/competitor';
 import { parseJSON } from '../lib/parseJSON';
+import { addLLMUsage } from '../lib/cost';
 import { AgentContext, AgentResult, CompetitorOutput, ResearchOutput } from '../types';
 
 const anthropic = new Anthropic();
@@ -60,11 +61,12 @@ export async function runCompetitorAgent(
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: competitorSystemPrompt(context),
       messages: [{ role: 'user', content: competitorUserPrompt(allCompanies, searchText) }],
     });
 
+    addLLMUsage('competitor', message.usage);
     const raw = message.content[0].type === 'text' ? message.content[0].text : '';
     const parsed = parseJSON<CompetitorOutput>(raw);
 

@@ -1,65 +1,54 @@
-# CLAUDE.md — competitive-intel-agent
+# CLAUDE.md — ScoutWork
 
 ## Project Identity
-- **Product:** Competitive Intelligence Briefing Agent
-- **Brand:** Sabai Wave (SBW)
-- **Owner:** Alex (sole developer, US citizen, Chiang Mai, Thailand)
-- **LLC:** Wyoming LLC — Sabai Wave
+- **Product:** ScoutWork
+- **Tagline:** Competitive intelligence, on demand.
 
 ## What This Does
 User submits their company + up to 3 competitors + optional research focus.
-Multi-agent orchestration fires 6-8 parallel agents, collects structured outputs,
+Multi-agent orchestration fires parallel agents, collects structured outputs,
 runs a two-step synthesis (analysis → brief assembly), and streams status updates
 to the UI in real time via Server-Sent Events (SSE).
 
 Final output: a structured competitive intelligence brief in Markdown,
-displayed in the UI and downloadable.
+displayed in the UI and downloadable as PDF.
 
 ---
 
-## Architecture: Pattern B (Next.js as whole project)
+## Architecture
 
 ```
-competitive-intel-agent/
-├── app/                          # Next.js App Router
-│   ├── api/
-│   │   └── brief/
-│   │       └── route.ts          # SSE streaming endpoint → calls orchestrator
+├── app/
+│   ├── api/brief/route.ts          # SSE streaming endpoint → calls orchestrator
 │   ├── layout.tsx
-│   └── page.tsx                  # Main UI
+│   └── page.tsx                    # Main UI
 ├── src/
-│   ├── agents/                   # Pure TS — no Next.js imports ever
-│   │   ├── research.ts           # Tavily search per company
-│   │   ├── positioning.ts        # Messaging + pricing signals
-│   │   ├── competitor.ts         # Feature gaps, recent moves (Tavily)
-│   │   └── content.ts            # SEO + content strategy
-│   ├── orchestrator.ts           # Entry point: parses request, dispatches agents
+│   ├── agents/                     # Pure TS — no Next.js imports ever
+│   │   ├── research.ts             # Tavily search per company
+│   │   ├── positioning.ts          # Messaging + pricing signals
+│   │   ├── competitor.ts           # Feature gaps, recent moves (Tavily)
+│   │   └── content.ts              # SEO + content strategy
+│   ├── orchestrator.ts             # Entry point: parses request, dispatches agents
 │   ├── synthesis/
-│   │   └── synthesize.ts         # Step A: analysis | Step B: brief assembly
+│   │   └── synthesize.ts           # Step A: analysis | Step B: brief assembly
 │   ├── tools/
-│   │   └── tavily.ts             # Tavily API client (typed wrapper)
+│   │   └── tavily.ts               # Tavily API client (typed wrapper)
 │   ├── types/
-│   │   └── index.ts              # All shared interfaces — source of truth
+│   │   └── index.ts                # All shared interfaces — source of truth
+│   ├── lib/
+│   │   ├── cost.ts                 # Token + cost tracking, prints summary per run
+│   │   └── parseJSON.ts            # Strips markdown fences from LLM responses
 │   └── prompts/
-│       ├── orchestrator.ts       # Dynamic brief generation prompt
+│       ├── orchestrator.ts
 │       ├── research.ts
 │       ├── positioning.ts
 │       ├── competitor.ts
 │       ├── content.ts
 │       └── synthesis.ts
-├── outputs/                      # Generated .md briefs saved here
-├── planning/                     # Internal docs — not for public GitHub
-│   ├── 01_bootstrap.md
-│   └── 02_new_vertical.md
 ├── config/
-│   └── client.ts                 # White-label config (brand, colors, copy)
-├── CLAUDE.md                     # ← you are here
-├── .env.local                    # Never committed
-├── .gitignore
-├── next.config.ts
-├── tailwind.config.ts
-├── tsconfig.json
-└── package.json
+│   └── client.ts                   # Brand config — all user-facing strings
+├── planning/                       # Internal docs — gitignored
+└── outputs/                        # Generated briefs — gitignored
 ```
 
 ---
@@ -69,21 +58,20 @@ competitive-intel-agent/
 ```
 1.  POST /api/brief  →  route.ts opens SSE stream
 2.  orchestrator.ts receives BriefingRequest
-3.  Orchestrator LLM call → generates per-agent dynamic brief (tailored instructions)
+3.  Orchestrator LLM call → generates per-agent dynamic brief
 4.  Promise.allSettled([
       research(yourCompany),
-      research(competitor1),       ← scales with input, not fixed
-      research(competitor2),
+      research(competitor1..N),     ← scales with input
       positioning(allCompanies),
       competitor(allCompanies),
       content(allCompanies)
     ])
-5.  Each agent resolves → SSE event: { agent, status, confidence }
+5.  Each agent resolves → SSE event: { agent, status, confidence, durationMs }
 6.  Full AgentResult<T>[] envelope assembled
 7.  synthesize.ts Step A: Analysis LLM call (patterns, gaps, opportunities)
 8.  synthesize.ts Step B: Brief assembly LLM call → structured Markdown
 9.  SSE event: { type: 'complete', brief: BriefingOutput }
-10. UI renders brief, offers download
+10. UI renders brief, offers PDF download
 ```
 
 **Critical:** Research runs per-company, not once globally.
@@ -102,6 +90,10 @@ competitive-intel-agent/
 | Analysis | none | all agent outputs | AnalysisOutput |
 | Synthesis | none | AnalysisOutput + all outputs | BriefingOutput |
 
+Key output fields added in Phase 3:
+- `PositioningOutput.positioningVulnerability` — most exploitable gap in that company's positioning
+- `CompetitorOutput.competitiveVerdict` — who's most dangerous, is position strengthening or eroding
+
 ---
 
 ## Streaming Architecture (SSE)
@@ -109,70 +101,60 @@ competitive-intel-agent/
 API route at `app/api/brief/route.ts` uses a `ReadableStream` with SSE encoding.
 Each event is JSON: `data: {...}\n\n`
 
-Event types:
 ```typescript
-{ type: 'status',   agent: string, status: 'running' | 'complete' | 'failed', confidence?: string }
+{ type: 'status',   agent: string, status: 'running' | 'complete' | 'failed', confidence?: string, durationMs?: number }
 { type: 'analysis', data: AnalysisOutput }
 { type: 'complete', brief: BriefingOutput }
 { type: 'error',    message: string }
 ```
-
-Frontend uses `EventSource` API or `fetch` with streaming reader.
-Show live agent status panel while brief assembles.
 
 ---
 
 ## Key Implementation Rules
 
 ### Agents
-- `src/agents/` contains ONLY pure TypeScript functions
-- Zero Next.js imports in `src/` — agents must be framework-agnostic
-- Every agent returns a typed output + `confidence` + `gaps`
-- Agents never throw — they return `AgentResult<T>` with status
+- `src/agents/` contains ONLY pure TypeScript functions — zero Next.js imports
+- Every agent returns `AgentResult<T>` with status — agents never throw
+- Every agent output includes `confidence` + `gaps`
 
 ### Failure Handling
-- Use `Promise.allSettled` — one failure does not abort the pipeline
+- `Promise.allSettled` — one failure does not abort the pipeline
 - Synthesis receives full envelope including failed agents
-- Synthesis prompt instructs: if agent failed, note gap, proceed with available data
+- `buildDegradedContext()` in synthesize.ts generates specific gap messages per failed agent
 - Final brief `metadata.agentStatuses` records which agents succeeded/failed
 
 ### Tavily
 - Research and Competitor agents use Tavily
 - Positioning and Content agents reason over Research output (no extra API calls)
-- Depth setting controls Tavily `max_results`: quick=3, standard=5, deep=8
-- Wrap all Tavily calls in try/catch — return low-confidence ResearchOutput on failure
+- Depth controls Tavily `max_results`: quick=3, standard=5, deep=8
+- All Tavily calls wrapped in try/catch
 
 ### Prompts
-- All prompts live in `src/prompts/` as exported template functions
-- Prompts accept typed context and return strings
-- Orchestrator prompt is the most important — it generates the per-agent brief
-  that tailors each agent's focus to the specific user query
+- All prompts in `src/prompts/` as exported template functions
+- All rewritten in Phase 3 against `planning/brief-rubric.md`
+- All LLM responses go through `src/lib/parseJSON.ts` before parsing
+- `max_tokens` set generously per agent to prevent JSON truncation
 
 ### Output Format
-Brief sections (in order):
-1. Executive Summary (3-5 bullets)
-2. Company Snapshot (your company)
-3. Competitor Profiles (one per competitor)
+1. Executive Summary (3-5 bullets — verdict first)
+2. Company Snapshot
+3. Competitor Profiles
 4. Positioning Gap Analysis
 5. Recent Moves & Signals
 6. Content/SEO Opportunities
 7. Recommended Actions
-
-### White-labeling
-`config/client.ts` contains brand config. Same pattern as ecom-ops-agent.
-All user-facing strings sourced from config, not hardcoded.
 
 ---
 
 ## Environment Variables
 
 ```bash
-ANTHROPIC_API_KEY=
-TAVILY_API_KEY=
+ANTHROPIC_API_KEY=        # required
+TAVILY_API_KEY=           # required
+DRY_RUN=true              # optional — zero-cost fixture mode
 ```
 
-Both required. App will throw on startup if missing.
-Never commit `.env.local`. Add to `.gitignore` before first commit.
+Never commit `.env.local`.
 
 ---
 
@@ -188,72 +170,27 @@ Never commit `.env.local`. Add to `.gitignore` before first commit.
 
 ---
 
-## What's New vs. ecom-ops-agent (Learning Targets)
-
-| Concept | Status |
-|---|---|
-| Multi-agent orchestration | NEW |
-| Parallel execution with Promise.allSettled | NEW |
-| Typed inter-agent contracts | NEW |
-| Partial failure + degraded output | NEW |
-| SSE streaming to UI | NEW |
-| External API integration (Tavily) | NEW |
-| Dynamic orchestrator prompting | NEW |
-| Agent loop, tool use, system prompts | carried over |
-| MCP pattern (runTool) | not used here — pure SDK |
-| TypeScript/Node.js patterns | carried over |
-
----
-
-## Session Workflow
-
-- **Strategy/architecture decisions:** claude.ai chat thread
-- **Implementation:** Claude Code (VS Code extension)
-- **This file:** source of truth for every Claude Code session
-- **Bootstrap prompt:** `planning/01_bootstrap.md` — paste at session start
-
----
-
 ## UI Design Standards
-You are also acting as a senior UI/UX engineer.
-Default to polished, modern interfaces without being asked.
+
+You are also acting as a senior UI/UX engineer. Default to polished, modern interfaces.
 
 Design direction: Clean, minimal, light mode. White backgrounds, soft borders, generous whitespace.
 Feel: Simple SaaS form UI — think Typeform or early Linear (light). No dark mode unless explicitly requested.
 Typography: Bold sans-serif headings, muted gray subtitles, clear label hierarchy.
-Buttons: Primary = solid black fill, white text. Secondary = outlined. Rounded corners, full-width CTAs where appropriate.
+Buttons: Primary = solid black fill, white text. Secondary = outlined. Rounded corners, full-width CTAs.
 Inputs: Light border, subtle placeholder text, clean focus states.
-Depth selectors / toggles: Pill-style segmented control, black fill for selected state.
-Component library: Shadcn/ui + Tailwind.
+Depth selectors: Pill-style segmented control, black fill for selected state.
 Always add: hover states, loading states, empty states.
-Never ship: dark backgrounds by default, heavy shadows, neon accents, unstyled buttons, raw HTML tables.
+Never ship: dark backgrounds, heavy shadows, neon accents, unstyled buttons, raw HTML tables.
 
 ---
 
-## Git Hygiene (learned from ecom-ops-agent)
-
-```bash
-# .gitignore must exist BEFORE first commit
-.env.local
-.env
-outputs/
-.next/
-node_modules/
-```
+## Git Hygiene
 
 If you accidentally commit a secret:
 1. Rotate the key immediately
 2. `git rm -r --cached .`
-3. `git add .`
-4. `git commit -m "remove tracked secrets"`
-5. Consider `git filter-branch` or BFG for history cleanup
+3. `git add . && git commit -m "remove tracked secrets"`
+4. Consider `git filter-branch` or BFG for history cleanup
 
----
-
-## Current Status
-
-- [x] Phase 1: Backend (agents, orchestrator, synthesis, Tavily)
-- [x] Phase 2: SSE API route + Next.js UI
-- [ ] Phase 3: Vercel deployment
-- [ ] Phase 4: Token management (budget cap, usage tracking, degraded output on limit)
-- [ ] Phase 5: New vertical (via planning/02_new_vertical.md)
+Gitignored: `.env*`, `outputs/`, `planning/`, `CLAUDE.md`, `PHASES.md`, `RESUME.md`

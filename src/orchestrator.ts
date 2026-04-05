@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { orchestratorPrompt } from './prompts/orchestrator';
 import { parseJSON } from './lib/parseJSON';
 import { isDryRun, runDryOrchestrator } from './lib/dryRun';
+import { resetCostTracker, printCostSummary, setBriefCompanyCount } from './lib/cost';
 import { runResearchAgent } from './agents/research';
 import { runPositioningAgent } from './agents/positioning';
 import { runCompetitorAgent } from './agents/competitor';
@@ -35,7 +36,7 @@ interface OrchestratorBriefs {
 async function generateAgentBriefs(request: BriefingRequest): Promise<OrchestratorBriefs> {
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 1024,
+    max_tokens: 2048,
     messages: [{ role: 'user', content: orchestratorPrompt(request) }],
   });
 
@@ -66,6 +67,10 @@ export async function* runOrchestrator(
     yield* runDryOrchestrator(request);
     return;
   }
+
+  resetCostTracker();
+  setBriefCompanyCount(1 + request.competitors.length);
+
   // ── Step 1: Generate per-agent briefs ─────────────────────────────────────
   const briefs = await generateAgentBriefs(request);
 
@@ -179,4 +184,6 @@ export async function* runOrchestrator(
       message: synthesisResult.briefResult.error ?? 'Synthesis failed',
     };
   }
+
+  printCostSummary();
 }
